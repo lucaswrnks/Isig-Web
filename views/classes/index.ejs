@@ -1,0 +1,186 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold mb-0">
+      <i class="bi bi-diagram-3-fill me-2" style="color:#16a34a"></i>Classes
+    </h2>
+    <% if (locals.user && locals.user.role === 'admin') { %>
+    <a href="/classes/new" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle classe
+    </a>
+    <% } %>
+  </div>
+
+  <!-- Filtres -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2 d-flex gap-2 flex-wrap align-items-center">
+      <input type="text" id="searchInput" class="form-control w-auto flex-grow-1" placeholder="🔍 Rechercher une classe...">
+      <select id="filterFormation" class="form-select w-auto">
+        <option value="">Toutes les formations</option>
+      </select>
+      <select id="filterType" class="form-select w-auto">
+        <option value="">Tous les types</option>
+        <option value="BTS">BTS</option>
+        <option value="Bachelor">Bachelor</option>
+        <option value="Licence">Licence</option>
+        <option value="Master">Master</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Classe</th>
+              <th>Année</th>
+              <th>Formation</th>
+              <th>Type</th>
+              <th>Étudiants</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="7" class="text-center py-4">
+              <div class="spinner-border" style="color:#16a34a"></div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Confirmation</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">Supprimer cette classe ? Les étudiants ne seront pas supprimés mais seront dissociés.</div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button class="btn btn-danger" id="confirmDelete">Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const isAdmin = '<%= locals.user?.role %>' === 'admin';
+let allClasses = [];
+let deleteId   = null;
+const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+const TYPE_COLORS = {
+  BTS: 'primary', Bachelor: 'success', Licence: 'warning', Master: 'purple',
+};
+const TYPE_STYLES = {
+  BTS:      'color:#1d4ed8',
+  Bachelor: 'color:#15803d',
+  Licence:  'color:#854d0e',
+  Master:   'color:#7c3aed',
+};
+
+function render(data) {
+  const tbody = document.getElementById('tableBody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Aucune classe trouvée</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(c => {
+    const type = c.formation?.type || '–';
+    return `
+    <tr>
+      <td><span class="badge bg-secondary">${c.id}</span></td>
+      <td class="fw-semibold">${c.nom}</td>
+      <td><span class="badge bg-light text-dark border">${c.annee}ère/ème année</span></td>
+      <td>${c.formation?.nom || '–'}</td>
+      <td><span class="badge" style="background:#f0fdf4;${TYPE_STYLES[type] || ''};font-size:.7rem">${type}</span></td>
+      <td>
+        <a href="/etudiants?id_classe=${c.id}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-people me-1"></i>Voir étudiants
+        </a>
+      </td>
+      <td class="text-center">
+        ${isAdmin ? `
+        <a href="/classes/${c.id}/edit" class="btn btn-sm btn-outline-warning me-1">
+          <i class="bi bi-pencil-fill"></i>
+        </a>
+        <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${c.id})">
+          <i class="bi bi-trash-fill"></i>
+        </button>` : '–'}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function load() {
+  // Charger formations pour le filtre
+  const fRes = await fetch('/api/formations', { credentials: 'include' });
+  const formations = await fRes.json();
+  const sel = document.getElementById('filterFormation');
+  formations.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.id;
+    opt.textContent = f.nom + ' (' + f.type + ')';
+    sel.appendChild(opt);
+  });
+
+  // Lire param URL éventuel ?id_formation=X
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('id_formation')) {
+    sel.value = params.get('id_formation');
+  }
+
+  // Charger les classes
+  const res = await fetch('/api/classes', { credentials: 'include' });
+  if (res.status === 401) { window.location.href = '/login'; return; }
+  allClasses = await res.json();
+  applyFilters();
+}
+
+function applyFilters() {
+  const q    = document.getElementById('searchInput').value.toLowerCase();
+  const fId  = document.getElementById('filterFormation').value;
+  const type = document.getElementById('filterType').value;
+  let data = allClasses;
+  if (q)    data = data.filter(c => c.nom.toLowerCase().includes(q) || (c.formation?.nom || '').toLowerCase().includes(q));
+  if (fId)  data = data.filter(c => String(c.id_formation) === fId);
+  if (type) data = data.filter(c => c.formation?.type === type);
+  render(data);
+}
+
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('filterFormation').addEventListener('change', applyFilters);
+document.getElementById('filterType').addEventListener('change', applyFilters);
+
+function askDelete(id) { deleteId = id; deleteModal.show(); }
+
+document.getElementById('confirmDelete').addEventListener('click', async () => {
+  const res  = await fetch('/api/classes/' + deleteId, { method: 'DELETE', credentials: 'include' });
+  const data = await res.json();
+  deleteModal.hide();
+  showToast(res.ok ? 'success' : 'danger', data.message);
+  if (res.ok) load();
+});
+
+function showToast(type, msg) {
+  const div = document.createElement('div');
+  div.className = 'toast align-items-center text-bg-' + type + ' border-0 show mb-2';
+  div.innerHTML = '<div class="d-flex"><div class="toast-body">' + msg + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+  document.getElementById('alertContainer').appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+
+load();
+</script>
+<%- include('../partials/footer') %>

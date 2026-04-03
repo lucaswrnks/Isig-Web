@@ -1,0 +1,172 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold mb-0"><i class="bi bi-person-workspace text-success me-2"></i>Enseignants</h2>
+    <% if (locals.user && locals.user.role === 'admin') { %>
+    <a href="/enseignants/new" class="btn btn-success"><i class="bi bi-plus-lg me-1"></i>Nouvel enseignant</a>
+    <% } %>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+      <input type="text" id="searchInput" class="form-control" placeholder="🔍 Rechercher...">
+    </div>
+  </div>
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-success">
+            <tr><th>#</th><th>Nom</th><th>Prénom</th><th>Date de naissance</th><th>Téléphone</th><th>Adresse</th><th class="text-center">Actions</th></tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-success"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Confirmation</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">Supprimer cet enseignant ?</div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button class="btn btn-danger" id="confirmDelete">Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal contact -->
+<div class="modal fade" id="contactModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="bi bi-envelope-fill me-2"></i>Contacter l'enseignant</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3 text-center">
+          <div class="rounded-circle bg-success d-inline-flex align-items-center justify-content-center text-white mb-2" style="width:56px;height:56px;font-size:1.4rem">
+            <i class="bi bi-person-workspace"></i>
+          </div>
+          <h5 class="fw-bold mb-1" id="contactNom"></h5>
+          <span class="badge bg-success">Enseignant</span>
+        </div>
+        <hr>
+        <div class="d-grid gap-2">
+          <a id="contactTel" href="#" class="btn btn-outline-success d-none"><i class="bi bi-telephone-fill me-2"></i>Appeler : <span id="contactTelNum"></span></a>
+          <a id="contactSMS" href="#" class="btn btn-outline-primary d-none"><i class="bi bi-chat-fill me-2"></i>Envoyer un SMS</a>
+          <a id="contactEmail" href="#" class="btn btn-outline-warning d-none"><i class="bi bi-envelope-fill me-2"></i>Envoyer un email</a>
+        </div>
+        <div id="noContact" class="alert alert-warning d-none mt-3">
+          <i class="bi bi-exclamation-triangle me-2"></i>Aucune information de contact disponible.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const isAdmin = '<%= locals.user?.role %>' === 'admin';
+let allData = []; let deleteId = null;
+const modal        = new bootstrap.Modal(document.getElementById('deleteModal'));
+const contactModal = new bootstrap.Modal(document.getElementById('contactModal'));
+
+function formatDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '–'; }
+
+function render(data) {
+  const tbody = document.getElementById('tableBody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Aucun enseignant</td></tr>'; return; }
+  tbody.innerHTML = data.map(e => `
+    <tr>
+      <td><span class="badge bg-success">${e.id}</span></td>
+      <td class="fw-semibold">${e.nom}</td>
+      <td>${e.prenom}</td>
+      <td>${formatDate(e.dob)}</td>
+      <td>${e.phone ? '<a href="tel:' + e.phone + '" class="text-decoration-none">' + e.phone + '</a>' : '–'}</td>
+      <td class="text-truncate" style="max-width:180px">${e.adresse || '–'}</td>
+      <td class="text-center">
+        <button class="btn btn-sm btn-outline-info me-1" title="Contacter"
+          onclick="contacter('${e.nom} ${e.prenom}', '${e.phone || ''}', '${e.email || ''}')">
+          <i class="bi bi-envelope-fill"></i>
+        </button>
+        ${isAdmin ? `
+        <a href="/enseignants/${e.id}/edit" class="btn btn-sm btn-outline-warning me-1" title="Modifier">
+          <i class="bi bi-pencil-fill"></i>
+        </a>
+        <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${e.id})" title="Supprimer">
+          <i class="bi bi-trash-fill"></i>
+        </button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function load() {
+  const res = await fetch('/api/enseignants', { credentials: 'include' });
+  if (res.status === 401) { window.location.href = '/login'; return; }
+  allData = await res.json(); render(allData);
+}
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  render(allData.filter(x => x.nom.toLowerCase().includes(q) || x.prenom.toLowerCase().includes(q)));
+});
+
+function askDelete(id) { deleteId = id; modal.show(); }
+
+document.getElementById('confirmDelete').addEventListener('click', async () => {
+  const res  = await fetch('/api/enseignants/' + deleteId, { method: 'DELETE', credentials: 'include' });
+  const data = await res.json();
+  modal.hide();
+  showToast(res.ok ? 'success' : 'danger', data.message);
+  if (res.ok) load();
+});
+
+function contacter(nom, phone, email) {
+  document.getElementById('contactNom').textContent = nom;
+  const telBtn    = document.getElementById('contactTel');
+  const smsBtn    = document.getElementById('contactSMS');
+  const emailBtn  = document.getElementById('contactEmail');
+  const noContact = document.getElementById('noContact');
+  telBtn.classList.add('d-none');
+  smsBtn.classList.add('d-none');
+  emailBtn.classList.add('d-none');
+  noContact.classList.add('d-none');
+  if (phone) {
+    document.getElementById('contactTelNum').textContent = phone;
+    telBtn.href = 'tel:' + phone;
+    smsBtn.href = 'sms:' + phone;
+    telBtn.classList.remove('d-none');
+    smsBtn.classList.remove('d-none');
+  }
+  if (email) {
+    emailBtn.href = 'mailto:' + email + '?subject=Message ISIG - Paris&body=Bonjour ' + nom + ',';
+    emailBtn.classList.remove('d-none');
+  }
+  if (!phone && !email) noContact.classList.remove('d-none');
+  contactModal.show();
+}
+
+function showToast(type, msg) {
+  const div = document.createElement('div');
+  div.className = 'toast align-items-center text-bg-' + type + ' border-0 show mb-2';
+  div.innerHTML = '<div class="d-flex"><div class="toast-body">' + msg + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+  document.getElementById('alertContainer').appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+
+load();
+</script>
+<%- include('../partials/footer') %>

@@ -1,0 +1,153 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold mb-0">
+      <i class="bi bi-mortarboard-fill me-2" style="color:#16a34a"></i>Formations
+    </h2>
+    <% if (locals.user && locals.user.role === 'admin') { %>
+    <a href="/formations/new" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle formation
+    </a>
+    <% } %>
+  </div>
+
+  <!-- Filtres par type -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2 d-flex gap-2 flex-wrap align-items-center">
+      <input type="text" id="searchInput" class="form-control w-auto flex-grow-1" placeholder="🔍 Rechercher une formation...">
+      <select id="filterType" class="form-select w-auto">
+        <option value="">Tous les types</option>
+        <option value="BTS">BTS</option>
+        <option value="Bachelor">Bachelor</option>
+        <option value="Licence">Licence</option>
+        <option value="Master">Master</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row g-3" id="formationsRow">
+    <div class="col-12 text-center py-5">
+      <div class="spinner-border" style="color:#16a34a"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Confirmation</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">Supprimer cette formation ? Toutes les classes associées seront aussi supprimées.</div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button class="btn btn-danger" id="confirmDelete">Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const isAdmin = '<%= locals.user?.role %>' === 'admin';
+let allFormations = [];
+let deleteId = null;
+const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+const TYPE_COLORS = {
+  BTS:      { bg: '#dbeafe', text: '#1d4ed8', badge: 'primary' },
+  Bachelor: { bg: '#dcfce7', text: '#15803d', badge: 'success' },
+  Licence:  { bg: '#fef9c3', text: '#854d0e', badge: 'warning' },
+  Master:   { bg: '#fae8ff', text: '#7c3aed', badge: 'purple'  },
+};
+
+function render(data) {
+  const row = document.getElementById('formationsRow');
+  if (!data.length) {
+    row.innerHTML = '<div class="col-12 text-center text-muted py-4">Aucune formation trouvée</div>';
+    return;
+  }
+  row.innerHTML = data.map(f => {
+    const colors = TYPE_COLORS[f.type] || { bg: '#f4f4f5', text: '#333' };
+    const nbClasses = f.classes ? f.classes.length : 0;
+    return `
+    <div class="col-md-6 col-xl-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header d-flex justify-content-between align-items-center"
+             style="background:${colors.bg}">
+          <div>
+            <span class="badge" style="background:${colors.text};font-size:.7rem">${f.type}</span>
+            <h6 class="fw-bold mt-1 mb-0" style="color:${colors.text}">${f.nom}</h6>
+          </div>
+          <span class="badge bg-secondary">${f.duree} an${f.duree > 1 ? 's' : ''}</span>
+        </div>
+        <div class="card-body py-2">
+          <p class="small text-muted mb-2">${f.description || 'Aucune description.'}</p>
+          <p class="small mb-0">
+            <i class="bi bi-diagram-3 me-1" style="color:#16a34a"></i>
+            <strong>${nbClasses}</strong> classe${nbClasses !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <div class="card-footer bg-transparent d-flex gap-1 justify-content-between align-items-center">
+          <a href="/classes?id_formation=${f.id}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-diagram-3 me-1"></i>Voir les classes
+          </a>
+          <div class="d-flex gap-1">
+            ${isAdmin ? `
+            <a href="/formations/${f.id}/edit" class="btn btn-sm btn-outline-warning">
+              <i class="bi bi-pencil-fill"></i>
+            </a>
+            <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${f.id})">
+              <i class="bi bi-trash-fill"></i>
+            </button>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function load() {
+  const res = await fetch('/api/formations', { credentials: 'include' });
+  if (res.status === 401) { window.location.href = '/login'; return; }
+  allFormations = await res.json();
+  applyFilters();
+}
+
+function applyFilters() {
+  const q    = document.getElementById('searchInput').value.toLowerCase();
+  const type = document.getElementById('filterType').value;
+  let data = allFormations;
+  if (q)    data = data.filter(f => f.nom.toLowerCase().includes(q));
+  if (type) data = data.filter(f => f.type === type);
+  render(data);
+}
+
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('filterType').addEventListener('change', applyFilters);
+
+function askDelete(id) { deleteId = id; deleteModal.show(); }
+
+document.getElementById('confirmDelete').addEventListener('click', async () => {
+  const res  = await fetch('/api/formations/' + deleteId, { method: 'DELETE', credentials: 'include' });
+  const data = await res.json();
+  deleteModal.hide();
+  showToast(res.ok ? 'success' : 'danger', data.message);
+  if (res.ok) load();
+});
+
+function showToast(type, msg) {
+  const div = document.createElement('div');
+  div.className = 'toast align-items-center text-bg-' + type + ' border-0 show mb-2';
+  div.innerHTML = '<div class="d-flex"><div class="toast-body">' + msg + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+  document.getElementById('alertContainer').appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+
+load();
+</script>
+<%- include('../partials/footer') %>

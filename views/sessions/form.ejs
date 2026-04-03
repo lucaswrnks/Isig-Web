@@ -1,0 +1,167 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+<div class="container py-4" style="max-width:680px">
+  <div class="card border-0 shadow">
+    <div class="card-header text-white" style="background:#6610f2">
+      <h5 class="mb-0 fw-bold">
+        <i class="bi bi-calendar2-<%= item ? 'check' : 'plus' %>-fill me-2"></i>
+        <%= item ? 'Modifier la session' : 'Nouvelle session' %>
+      </h5>
+    </div>
+    <div class="card-body p-4">
+      <div id="formError" class="alert alert-danger d-none"></div>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label fw-semibold">Titre *</label>
+          <input type="text" id="titre" class="form-control" placeholder="Ex: TD Algo – Groupe A">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Description</label>
+          <textarea id="description" class="form-control" rows="2" placeholder="Informations complémentaires..."></textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Cours *</label>
+          <select id="id_cours" class="form-select"><option value="">Chargement...</option></select>
+          <% if (locals.user?.role === 'enseignant') { %>
+            <small class="text-muted"><i class="bi bi-lock-fill me-1"></i>Cours attitré – non modifiable</small>
+          <% } %>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Enseignant *</label>
+          <select id="id_enseignant" class="form-select"><option value="">Chargement...</option></select>
+          <% if (locals.user?.role === 'enseignant') { %>
+            <small class="text-muted"><i class="bi bi-lock-fill me-1"></i>Non modifiable</small>
+          <% } %>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Salle</label>
+          <select id="id_salle" class="form-select"><option value="">– Aucune –</option></select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Capacité max</label>
+          <input type="number" id="capacite_max" class="form-control" placeholder="30" min="1">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Date et heure début *</label>
+          <input type="datetime-local" id="date_debut" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Date et heure fin *</label>
+          <input type="datetime-local" id="date_fin" class="form-control">
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <button id="saveBtn" class="btn text-white" style="background:#6610f2"><i class="bi bi-save me-1"></i>Enregistrer</button>
+        <a href="/sessions" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const itemId     = <%- JSON.stringify(item?.id || null) %>;
+const userRole   = '<%= locals.user?.role %>';
+const userNom    = '<%= locals.user?.nom || "" %>';
+const userPrenom = '<%= locals.user?.prenom || "" %>';
+
+async function loadSelects() {
+  const [cours, enseignants, salles] = await Promise.all([
+    fetch('/api/cours',       { credentials: 'include' }).then(r => r.json()),
+    fetch('/api/enseignants', { credentials: 'include' }).then(r => r.json()),
+    fetch('/api/salles',      { credentials: 'include' }).then(r => r.json()),
+  ]);
+
+  // Populate salles
+  document.getElementById('id_salle').innerHTML =
+    '<option value="">– Aucune –</option>' +
+    salles.map(s => `<option value="${s.id}">Salle ${s.numero} (${s.nombre_chaises} places)</option>`).join('');
+
+  if (userRole === 'enseignant') {
+    // Trouver la fiche enseignant du user connecté
+    const ens = enseignants.find(e => e.nom === userNom && e.prenom === userPrenom);
+
+    // Pré-remplir et bloquer le select enseignant
+    document.getElementById('id_enseignant').innerHTML =
+      ens ? `<option value="${ens.id}" selected>${ens.nom} ${ens.prenom}</option>`
+          : '<option value="">Introuvable</option>';
+    document.getElementById('id_enseignant').disabled = true;
+
+    // Filtrer uniquement le cours attitré à cet enseignant
+    const coursFiltres = ens ? cours.filter(c => c.id_enseignant === ens.id) : cours;
+    document.getElementById('id_cours').innerHTML =
+      coursFiltres.length > 0
+        ? coursFiltres.map(c => `<option value="${c.id}">${c.nom}</option>`).join('')
+        : '<option value="">Aucun cours attitré</option>';
+    document.getElementById('id_cours').disabled = true;
+
+  } else {
+    // Admin : tous les cours et enseignants
+    document.getElementById('id_cours').innerHTML =
+      '<option value="">Sélectionner un cours</option>' +
+      cours.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+
+    document.getElementById('id_enseignant').innerHTML =
+      '<option value="">Sélectionner un enseignant</option>' +
+      enseignants.map(e => `<option value="${e.id}">${e.nom} ${e.prenom}</option>`).join('');
+  }
+
+  if (itemId) await loadData();
+}
+
+async function loadData() {
+  const s = await fetch('/api/sessions/' + itemId, { credentials: 'include' }).then(r => r.json());
+  document.getElementById('titre').value         = s.titre || '';
+  document.getElementById('description').value   = s.description || '';
+  document.getElementById('id_salle').value      = s.id_salle || '';
+  document.getElementById('capacite_max').value  = s.capacite_max || '';
+  if (s.date_debut) document.getElementById('date_debut').value = s.date_debut.substring(0,16);
+  if (s.date_fin)   document.getElementById('date_fin').value   = s.date_fin.substring(0,16);
+
+  // Pour admin seulement : on peut changer cours et enseignant
+  if (userRole !== 'enseignant') {
+    document.getElementById('id_cours').value      = s.id_cours || '';
+    document.getElementById('id_enseignant').value = s.id_enseignant || '';
+  }
+}
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const coursEl      = document.getElementById('id_cours');
+  const enseignantEl = document.getElementById('id_enseignant');
+
+  // Récupérer la valeur même si disabled
+  const id_cours      = coursEl.value      || coursEl.options[coursEl.selectedIndex]?.value;
+  const id_enseignant = enseignantEl.value || enseignantEl.options[enseignantEl.selectedIndex]?.value;
+
+  const body = {
+    titre:        document.getElementById('titre').value.trim(),
+    description:  document.getElementById('description').value.trim(),
+    date_debut:   document.getElementById('date_debut').value,
+    date_fin:     document.getElementById('date_fin').value,
+    id_cours,
+    id_salle:     document.getElementById('id_salle').value || null,
+    id_enseignant,
+    capacite_max: document.getElementById('capacite_max').value || null,
+  };
+
+  const err = document.getElementById('formError');
+  err.classList.add('d-none');
+  if (!body.titre || !body.date_debut || !body.date_fin || !body.id_cours || !body.id_enseignant) {
+    err.textContent = 'Veuillez remplir tous les champs obligatoires.';
+    err.classList.remove('d-none'); return;
+  }
+
+  const res  = await fetch(itemId ? '/api/sessions/' + itemId : '/api/sessions', {
+    method: itemId ? 'PUT' : 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (res.ok) window.location.href = '/sessions';
+  else { err.textContent = data.message; err.classList.remove('d-none'); }
+});
+
+loadSelects();
+</script>
+<%- include('../partials/footer') %>

@@ -1,0 +1,134 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+<div class="container py-4" style="max-width:600px">
+  <div class="card border-0 shadow">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0 fw-bold"><i class="bi bi-shield-person me-2"></i><%= item?'Modifier':'Nouvel' %> utilisateur</h5>
+    </div>
+    <div class="card-body p-4">
+      <div id="formError" class="alert alert-danger d-none"></div>
+      <div id="formSuccess" class="alert alert-success d-none"></div>
+
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label fw-semibold">Prénom *</label><input type="text" id="prenom" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label fw-semibold">Nom *</label><input type="text" id="nom" class="form-control"></div>
+        <div class="col-12"><label class="form-label fw-semibold">Nom d'utilisateur *</label><input type="text" id="username" class="form-control"></div>
+        <div class="col-12"><label class="form-label fw-semibold">Email *</label><input type="email" id="email" class="form-control"></div>
+        <div class="col-12"><label class="form-label fw-semibold">Mot de passe <%= item?'(laisser vide pour ne pas changer)':'*' %></label><input type="password" id="password" class="form-control"></div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Rôle</label>
+          <select id="role" class="form-select" onchange="toggleDob()">
+            <option value="etudiant">Étudiant</option>
+            <option value="enseignant">Enseignant</option>
+            <option value="administratif">Administratif</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Statut</label>
+          <select id="status" class="form-select">
+            <option value="active">Actif</option>
+            <option value="inactive">Inactif</option>
+            <option value="banned">Banni</option>
+          </select>
+        </div>
+        <div class="col-md-6"><label class="form-label fw-semibold">Téléphone</label><input type="text" id="phone" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label fw-semibold">Adresse</label><input type="text" id="adresse" class="form-control"></div>
+
+        <!-- Champ date de naissance - affiché uniquement pour étudiant/enseignant -->
+        <div class="col-12" id="dobField">
+          <label class="form-label fw-semibold">
+            Date de naissance
+            <span class="badge bg-info text-dark ms-1">Auto-créé dans la liste</span>
+          </label>
+          <input type="date" id="dob" class="form-control">
+          <small class="text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            Une fiche sera automatiquement créée dans la liste des
+            <span id="roleLabel">étudiants</span>.
+          </small>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button id="saveBtn" class="btn btn-dark"><i class="bi bi-save me-1"></i>Enregistrer</button>
+        <a href="/users" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const itemId = <%- JSON.stringify(item?.id||null) %>;
+
+function toggleDob() {
+  const role     = document.getElementById('role').value;
+  const dobField = document.getElementById('dobField');
+  const roleLabel = document.getElementById('roleLabel');
+  if (role === 'etudiant' || role === 'enseignant') {
+    dobField.classList.remove('d-none');
+    roleLabel.textContent = role === 'etudiant' ? 'étudiants' : 'enseignants';
+  } else {
+    dobField.classList.add('d-none');
+  }
+}
+
+async function loadData() {
+  if (!itemId) { toggleDob(); return; }
+  const d = await (await fetch('/api/users/' + itemId, { credentials: 'include' })).json();
+  ['username','email','nom','prenom','phone','adresse'].forEach(f => document.getElementById(f).value = d[f] || '');
+  document.getElementById('role').value   = d.role   || 'etudiant';
+  document.getElementById('status').value = d.status || 'active';
+  toggleDob();
+}
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const body = {
+    username: document.getElementById('username').value.trim(),
+    email:    document.getElementById('email').value.trim(),
+    role:     document.getElementById('role').value,
+    status:   document.getElementById('status').value,
+    nom:      document.getElementById('nom').value.trim(),
+    prenom:   document.getElementById('prenom').value.trim(),
+    phone:    document.getElementById('phone').value.trim(),
+    adresse:  document.getElementById('adresse').value.trim(),
+    dob:      document.getElementById('dob').value || null,
+  };
+  const pwd = document.getElementById('password').value;
+  if (pwd) body.password = pwd;
+
+  const err = document.getElementById('formError');
+  const ok  = document.getElementById('formSuccess');
+  err.classList.add('d-none');
+  ok.classList.add('d-none');
+
+  if (!body.username || !body.email || (!itemId && !pwd)) {
+    err.textContent = 'Username, email et mot de passe sont requis.';
+    err.classList.remove('d-none'); return;
+  }
+  if (!body.nom || !body.prenom) {
+    err.textContent = 'Nom et prénom sont requis.';
+    err.classList.remove('d-none'); return;
+  }
+
+  const res  = await fetch(itemId ? '/api/users/' + itemId : '/api/users', {
+    method: itemId ? 'PUT' : 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (res.ok) {
+    ok.textContent = data.message || 'Enregistré avec succès !';
+    ok.classList.remove('d-none');
+    setTimeout(() => window.location.href = '/users', 1200);
+  } else {
+    err.textContent = data.message;
+    err.classList.remove('d-none');
+  }
+});
+
+loadData();
+</script>
+<%- include('../partials/footer') %>

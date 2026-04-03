@@ -1,0 +1,303 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold mb-0">
+      <i class="bi bi-calendar2-week-fill me-2" style="color:#6610f2"></i>Sessions
+    </h2>
+    <% if (locals.user && (locals.user.role === 'admin' || locals.user.role === 'enseignant')) { %>
+    <a href="/sessions/new" class="btn" style="background:#6610f2;color:#fff">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle session
+    </a>
+    <% } %>
+  </div>
+
+  <!-- Filtres -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2 d-flex gap-2 flex-wrap">
+      <input type="text" id="searchInput" class="form-control w-auto flex-grow-1" placeholder="🔍 Rechercher...">
+      <select id="filterCours" class="form-select w-auto">
+        <option value="">Tous les cours</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row g-3" id="sessionsRow">
+    <div class="col-12 text-center py-5"><div class="spinner-border" style="color:#6610f2"></div></div>
+  </div>
+</div>
+
+<!-- Modal détail / inscriptions -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background:#6610f2">
+        <h5 class="modal-title"><i class="bi bi-calendar2-check me-2"></i><span id="modalTitre"></span></h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <p class="mb-1"><i class="bi bi-book me-2 text-warning"></i><strong>Cours :</strong> <span id="modalCours"></span></p>
+            <p class="mb-1"><i class="bi bi-person-workspace me-2 text-success"></i><strong>Enseignant :</strong> <span id="modalEnseignant"></span></p>
+            <p class="mb-1"><i class="bi bi-building me-2 text-danger"></i><strong>Salle :</strong> <span id="modalSalle"></span></p>
+          </div>
+          <div class="col-md-6">
+            <p class="mb-1"><i class="bi bi-clock me-2 text-primary"></i><strong>Début :</strong> <span id="modalDebut"></span></p>
+            <p class="mb-1"><i class="bi bi-clock-fill me-2 text-secondary"></i><strong>Fin :</strong> <span id="modalFin"></span></p>
+            <p class="mb-1"><i class="bi bi-people me-2 text-info"></i><strong>Places :</strong> <span id="modalPlaces"></span></p>
+          </div>
+        </div>
+        <p class="text-muted fst-italic" id="modalDesc"></p>
+        <hr>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0"><i class="bi bi-people-fill me-2"></i>Étudiants inscrits</h6>
+          <% if (locals.user && locals.user.role === 'admin') { %>
+          <div class="d-flex gap-2 align-items-center">
+            <select id="etudiantSelect" class="form-select form-select-sm" style="width:200px"></select>
+            <button class="btn btn-sm btn-success" onclick="inscrireEtudiant()"><i class="bi bi-plus"></i> Inscrire</button>
+          </div>
+          <% } %>
+        </div>
+        <div id="listeInscrits"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Confirmation</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">Supprimer cette session ?</div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button class="btn btn-danger" id="confirmDelete">Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const userRole   = '<%= locals.user?.role %>';
+const userNom    = '<%= locals.user?.nom || "" %>';
+const userPrenom = '<%= locals.user?.prenom || "" %>';
+
+let allSessions    = [];
+let allEtudiants   = [];
+let currentSessionId = null;
+let deleteId       = null;
+let monEnseignantId = null; // id de la fiche enseignant du user connecté
+
+const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+function formatDT(d) {
+  if (!d) return '–';
+  return new Date(d).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function isInscrit(session) {
+  if (userRole !== 'etudiant') return false;
+  return session.etudiants?.some(e => e.nom === userNom && e.prenom === userPrenom);
+}
+
+function isMaSession(session) {
+  if (userRole === 'admin') return true;
+  if (userRole === 'enseignant') return monEnseignantId && session.id_enseignant === monEnseignantId;
+  return false;
+}
+
+function placesRestantes(s) {
+  const inscrits = s.etudiants?.length || 0;
+  if (!s.capacite_max) return null;
+  return s.capacite_max - inscrits;
+}
+
+function render(data) {
+  const row = document.getElementById('sessionsRow');
+  if (!data.length) { row.innerHTML = '<div class="col-12 text-center text-muted py-4">Aucune session trouvée</div>'; return; }
+
+  // Peupler filtre cours
+  const cours = [...new Map(data.filter(s => s.cours).map(s => [s.cours.id, s.cours])).values()];
+  const sel = document.getElementById('filterCours');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">Tous les cours</option>' + cours.map(c =>
+    `<option value="${c.id}" ${currentVal==c.id?'selected':''}>${c.nom}</option>`).join('');
+
+  row.innerHTML = data.map(s => {
+    const places       = placesRestantes(s);
+    const inscrit      = isInscrit(s);
+    const pleine       = places !== null && places <= 0;
+    const inscritsCount = s.etudiants?.length || 0;
+    const canEdit      = isMaSession(s);
+
+    return `
+    <div class="col-md-6 col-xl-4">
+      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #6610f2!important">
+        <div class="card-header d-flex justify-content-between align-items-start" style="background:#f3eeff">
+          <div>
+            <h6 class="fw-bold mb-1" style="color:#6610f2">${s.titre}</h6>
+            <span class="badge bg-warning text-dark">${s.cours?.nom || '–'}</span>
+          </div>
+          ${places !== null ? `<span class="badge ${pleine?'bg-danger':'bg-success'}">${pleine ? 'Complet' : places + ' place(s)'}</span>` : ''}
+        </div>
+        <div class="card-body py-2">
+          <p class="small mb-1"><i class="bi bi-person-workspace text-success me-1"></i>${s.enseignant ? s.enseignant.nom + ' ' + s.enseignant.prenom : '–'}</p>
+          <p class="small mb-1"><i class="bi bi-building text-danger me-1"></i>${s.salle ? 'Salle ' + s.salle.numero : '–'}</p>
+          <p class="small mb-1"><i class="bi bi-clock text-primary me-1"></i>${formatDT(s.date_debut)}</p>
+          <p class="small mb-1"><i class="bi bi-clock-fill text-secondary me-1"></i>${formatDT(s.date_fin)}</p>
+          ${s.description ? `<p class="small text-muted fst-italic mb-0">${s.description}</p>` : ''}
+        </div>
+        <div class="card-footer bg-transparent d-flex flex-wrap gap-1 justify-content-between align-items-center">
+          <button class="btn btn-sm btn-outline-secondary" onclick="ouvrirDetail(${s.id})">
+            <i class="bi bi-people me-1"></i>${inscritsCount} inscrit(s)
+          </button>
+          <div class="d-flex gap-1">
+            ${userRole === 'etudiant' ? `
+              ${inscrit
+                ? `<button class="btn btn-sm btn-outline-danger" onclick="seDesinscrire(${s.id})"><i class="bi bi-x-circle me-1"></i>Se désinscrire</button>`
+                : `<button class="btn btn-sm btn-outline-success" onclick="sInscrire(${s.id})" ${pleine?'disabled':''}><i class="bi bi-check-circle me-1"></i>S'inscrire</button>`
+              }` : ''}
+            ${canEdit ? `
+              <a href="/sessions/${s.id}/edit" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil-fill"></i></a>
+              <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${s.id})"><i class="bi bi-trash-fill"></i></button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function load() {
+  // Si enseignant : récupérer son id de fiche enseignant
+  if (userRole === 'enseignant') {
+    const ens = await fetch('/api/enseignants', { credentials: 'include' }).then(r => r.json());
+    const moi = ens.find(e => e.nom === userNom && e.prenom === userPrenom);
+    if (moi) monEnseignantId = moi.id;
+  }
+
+  const res = await fetch('/api/sessions', { credentials: 'include' });
+  if (res.status === 401) { window.location.href = '/login'; return; }
+  allSessions = await res.json();
+  applyFilters();
+}
+
+async function loadEtudiants() {
+  if (userRole !== 'admin') return;
+  const res = await fetch('/api/etudiants', { credentials: 'include' });
+  allEtudiants = await res.json();
+}
+
+function applyFilters() {
+  const q     = document.getElementById('searchInput').value.toLowerCase();
+  const cours = document.getElementById('filterCours').value;
+  let data = allSessions;
+  if (q) data = data.filter(s =>
+    s.titre.toLowerCase().includes(q) ||
+    (s.cours?.nom || '').toLowerCase().includes(q) ||
+    (s.enseignant?.nom || '').toLowerCase().includes(q)
+  );
+  if (cours) data = data.filter(s => s.id_cours == cours);
+  render(data);
+}
+
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('filterCours').addEventListener('change', applyFilters);
+
+async function ouvrirDetail(id) {
+  currentSessionId = id;
+  const res = await fetch('/api/sessions/' + id, { credentials: 'include' });
+  const s   = await res.json();
+
+  document.getElementById('modalTitre').textContent      = s.titre;
+  document.getElementById('modalCours').textContent      = s.cours?.nom || '–';
+  document.getElementById('modalEnseignant').textContent = s.enseignant ? s.enseignant.nom + ' ' + s.enseignant.prenom : '–';
+  document.getElementById('modalSalle').textContent      = s.salle ? 'Salle ' + s.salle.numero + ' (' + s.salle.nombre_chaises + ' places)' : '–';
+  document.getElementById('modalDebut').textContent      = formatDT(s.date_debut);
+  document.getElementById('modalFin').textContent        = formatDT(s.date_fin);
+  document.getElementById('modalDesc').textContent       = s.description || '';
+  const places = placesRestantes(s);
+  document.getElementById('modalPlaces').textContent     = places !== null ? (s.etudiants?.length || 0) + ' / ' + s.capacite_max : 'Illimité';
+
+  const listeDiv = document.getElementById('listeInscrits');
+  if (!s.etudiants?.length) {
+    listeDiv.innerHTML = '<p class="text-muted">Aucun étudiant inscrit.</p>';
+  } else {
+    listeDiv.innerHTML = '<div class="list-group">' + s.etudiants.map(e => `
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-person-fill me-2 text-primary"></i>${e.nom} ${e.prenom}</span>
+        ${userRole === 'admin' ? `<button class="btn btn-sm btn-outline-danger" onclick="desinscrireEtudiant(${s.id}, ${e.id})"><i class="bi bi-x"></i> Désinscrire</button>` : ''}
+      </div>`).join('') + '</div>';
+  }
+
+  if (userRole === 'admin') {
+    const inscritsIds = (s.etudiants || []).map(e => e.id);
+    const disponibles = allEtudiants.filter(e => !inscritsIds.includes(e.id));
+    document.getElementById('etudiantSelect').innerHTML = disponibles.length
+      ? disponibles.map(e => `<option value="${e.id}">${e.nom} ${e.prenom}</option>`).join('')
+      : '<option value="">Tous inscrits</option>';
+  }
+
+  detailModal.show();
+}
+
+async function sInscrire(id) {
+  const res = await fetch('/api/sessions/' + id + '/inscrire', { method: 'POST', credentials: 'include' });
+  const d = await res.json();
+  showToast(res.ok ? 'success' : 'danger', d.message);
+  if (res.ok) { await load(); ouvrirDetail(id); }
+}
+
+async function seDesinscrire(id) {
+  const res = await fetch('/api/sessions/' + id + '/desinscrire', { method: 'DELETE', credentials: 'include' });
+  const d = await res.json();
+  showToast(res.ok ? 'success' : 'danger', d.message);
+  if (res.ok) { await load(); ouvrirDetail(id); }
+}
+
+async function inscrireEtudiant() {
+  const etudiantId = document.getElementById('etudiantSelect').value;
+  if (!etudiantId) return;
+  const res = await fetch('/api/sessions/' + currentSessionId + '/etudiants/' + etudiantId, { method: 'POST', credentials: 'include' });
+  const d = await res.json();
+  showToast(res.ok ? 'success' : 'danger', d.message);
+  if (res.ok) { await load(); ouvrirDetail(currentSessionId); }
+}
+
+async function desinscrireEtudiant(sessionId, etudiantId) {
+  const res = await fetch('/api/sessions/' + sessionId + '/etudiants/' + etudiantId, { method: 'DELETE', credentials: 'include' });
+  const d = await res.json();
+  showToast(res.ok ? 'success' : 'danger', d.message);
+  if (res.ok) { await load(); ouvrirDetail(sessionId); }
+}
+
+function askDelete(id) { deleteId = id; deleteModal.show(); }
+
+document.getElementById('confirmDelete').addEventListener('click', async () => {
+  const res = await fetch('/api/sessions/' + deleteId, { method: 'DELETE', credentials: 'include' });
+  const d   = await res.json();
+  deleteModal.hide();
+  showToast(res.ok ? 'success' : 'danger', d.message);
+  if (res.ok) load();
+});
+
+function showToast(type, msg) {
+  const div = document.createElement('div');
+  div.className = 'toast align-items-center text-bg-' + type + ' border-0 show mb-2';
+  div.innerHTML = '<div class="d-flex"><div class="toast-body">' + msg + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+  document.getElementById('alertContainer').appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+
+loadEtudiants();
+load();
+</script>
+<%- include('../partials/footer') %>

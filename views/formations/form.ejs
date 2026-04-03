@@ -1,0 +1,91 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+<div class="container py-4" style="max-width:600px">
+  <div class="card border-0 shadow">
+    <div class="card-header text-white" style="background:#16a34a">
+      <h5 class="mb-0 fw-bold">
+        <i class="bi bi-mortarboard-fill me-2"></i>
+        <%= item ? 'Modifier la formation' : 'Nouvelle formation' %>
+      </h5>
+    </div>
+    <div class="card-body p-4">
+      <div id="formError" class="alert alert-danger d-none"></div>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label fw-semibold">Nom de la formation <span class="text-danger">*</span></label>
+          <input type="text" id="nom" class="form-control" placeholder="Ex: Services Informatiques aux Organisations – option SLAM">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
+          <select id="type" class="form-select">
+            <option value="">Sélectionner...</option>
+            <option value="BTS">BTS</option>
+            <option value="Bachelor">Bachelor</option>
+            <option value="Licence">Licence</option>
+            <option value="Master">Master</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Durée (années)</label>
+          <input type="number" id="duree" class="form-control" min="1" max="5" value="2">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Description</label>
+          <textarea id="description" class="form-control" rows="3"
+            placeholder="Description de la formation, débouchés, compétences visées..."></textarea>
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <button id="saveBtn" class="btn text-white" style="background:#16a34a">
+          <i class="bi bi-save me-1"></i>Enregistrer
+        </button>
+        <a href="/formations" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Retour
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const itemId = <%- JSON.stringify(item?.id || null) %>;
+
+async function loadData() {
+  if (!itemId) return;
+  const res  = await fetch('/api/formations/' + itemId, { credentials: 'include' });
+  const data = await res.json();
+  document.getElementById('nom').value         = data.nom         || '';
+  document.getElementById('type').value        = data.type        || '';
+  document.getElementById('duree').value       = data.duree       || 2;
+  document.getElementById('description').value = data.description || '';
+}
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const body = {
+    nom:         document.getElementById('nom').value.trim(),
+    type:        document.getElementById('type').value,
+    duree:       parseInt(document.getElementById('duree').value) || 2,
+    description: document.getElementById('description').value.trim(),
+  };
+  const err = document.getElementById('formError');
+  err.classList.add('d-none');
+  if (!body.nom || !body.type) {
+    err.textContent = 'Nom et type sont obligatoires.';
+    err.classList.remove('d-none'); return;
+  }
+  const url    = itemId ? '/api/formations/' + itemId : '/api/formations';
+  const method = itemId ? 'PUT' : 'POST';
+  const res    = await fetch(url, {
+    method, credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (res.ok) window.location.href = '/formations';
+  else { err.textContent = data.message; err.classList.remove('d-none'); }
+});
+
+loadData();
+</script>
+<%- include('../partials/footer') %>

@@ -1,0 +1,44 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+<div class="container py-4" style="max-width:500px">
+  <div class="card border-0 shadow">
+    <div class="card-header bg-info text-white"><h5 class="mb-0 fw-bold"><i class="bi bi-clipboard-data me-2"></i><%= item?'Modifier':'Ajouter' %> une note</h5></div>
+    <div class="card-body p-4">
+      <div id="formError" class="alert alert-danger d-none"></div>
+      <div class="mb-3"><label class="form-label fw-semibold">Étudiant *</label><select id="id_etudiant" class="form-select"><option value="">-- Choisir --</option></select></div>
+      <div class="mb-3"><label class="form-label fw-semibold">Cours *</label><select id="id_cours" class="form-select"><option value="">-- Choisir --</option></select></div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Note * <span id="noteLabel" class="text-muted fs-6"></span></label>
+        <input type="number" id="note" class="form-control" min="0" max="20" step="0.5" placeholder="Ex: 14.5">
+      </div>
+      <div class="d-flex gap-2">
+        <button id="saveBtn" class="btn btn-info text-white"><i class="bi bi-save me-1"></i>Enregistrer</button>
+        <a href="/notes" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const itemId=<%- JSON.stringify(item?.id||null) %>;
+async function init(){
+  const [etRes,coRes]=await Promise.all([fetch('/api/etudiants'),fetch('/api/cours')]);
+  const [ets,cos]=[await etRes.json(),await coRes.json()];
+  const s1=document.getElementById('id_etudiant'),s2=document.getElementById('id_cours');
+  ets.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.nom+' '+e.prenom;s1.appendChild(o);});
+  cos.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nom;s2.appendChild(o);});
+  if(itemId){const d=await(await fetch(`/api/notes/${itemId}`)).json();s1.value=d.id_etudiant;s2.value=d.id_cours;document.getElementById('note').value=d.note;}
+}
+document.getElementById('note').addEventListener('input',e=>{const n=parseFloat(e.target.value);const lbl=document.getElementById('noteLabel');if(isNaN(n))lbl.textContent='';else if(n>=16)lbl.textContent='Très bien';else if(n>=14)lbl.textContent='Bien';else if(n>=12)lbl.textContent='Assez bien';else if(n>=10)lbl.textContent='Passable';else lbl.textContent='Insuffisant';});
+document.getElementById('saveBtn').addEventListener('click',async()=>{
+  const body={id_etudiant:document.getElementById('id_etudiant').value,id_cours:document.getElementById('id_cours').value,note:parseFloat(document.getElementById('note').value)};
+  const err=document.getElementById('formError');
+  if(!body.id_etudiant||!body.id_cours||isNaN(body.note)){err.textContent='Tous les champs sont requis.';err.classList.remove('d-none');return;}
+  const res=await fetch(itemId?`/api/notes/${itemId}`:'/api/notes',{method:itemId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(res.ok)window.location.href='/notes';
+  else{err.textContent=data.message;err.classList.remove('d-none');}
+});
+init();
+</script>
+<%- include('../partials/footer') %>

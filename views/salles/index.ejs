@@ -1,0 +1,77 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold mb-0"><i class="bi bi-building-fill text-danger me-2"></i>Salles</h2>
+    <% if (locals.user && locals.user.role === 'admin') { %>
+    <a href="/salles/new" class="btn btn-danger"><i class="bi bi-plus-lg me-1"></i>Nouvelle salle</a>
+    <% } %>
+  </div>
+  <div class="card border-0 shadow-sm mb-3"><div class="card-body py-2"><input type="text" id="searchInput" class="form-control" placeholder="🔍 Rechercher..."></div></div>
+  <div class="row g-3" id="cardsRow"><div class="col-12 text-center py-5"><div class="spinner-border text-danger"></div></div></div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header bg-danger text-white"><h5 class="modal-title">Confirmation</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">Supprimer cette salle ?</div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button class="btn btn-danger" id="confirmDelete">Supprimer</button></div>
+</div></div></div>
+
+<script>
+const isAdmin = '<%= locals.user?.role %>' === 'admin';
+let allData = []; let deleteId = null;
+const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+function render(data) {
+  const row = document.getElementById('cardsRow');
+  if (!data.length) { row.innerHTML = '<div class="col-12 text-center text-muted py-4">Aucune salle</div>'; return; }
+  row.innerHTML = data.map(s => `
+    <div class="col-md-4 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-danger text-white d-flex justify-content-between">
+          <span class="fw-bold"><i class="bi bi-building me-1"></i>${s.numero}</span>
+          <span class="badge bg-light text-dark"><i class="bi bi-person-fill me-1"></i>${s.nombre_chaises} places</span>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-0">${s.description || 'Aucune description'}</p>
+        </div>
+        ${isAdmin ? `
+        <div class="card-footer bg-transparent d-flex justify-content-end gap-2">
+          <a href="/salles/${s.id}/edit" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil-fill"></i></a>
+          <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${s.id})"><i class="bi bi-trash-fill"></i></button>
+        </div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function load() {
+  const res = await fetch('/api/salles', { credentials: 'include' });
+  if (res.status === 401) { window.location.href = '/login'; return; }
+  allData = await res.json(); render(allData);
+}
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  render(allData.filter(x => x.numero.toLowerCase().includes(q) || (x.description || '').toLowerCase().includes(q)));
+});
+
+function askDelete(id) { deleteId = id; modal.show(); }
+
+document.getElementById('confirmDelete').addEventListener('click', async () => {
+  const res = await fetch('/api/salles/' + deleteId, { method: 'DELETE', credentials: 'include' });
+  const d   = await res.json();
+  modal.hide(); showToast(res.ok ? 'success' : 'danger', d.message);
+  if (res.ok) load();
+});
+
+function showToast(type, msg) {
+  const div = document.createElement('div');
+  div.className = 'toast align-items-center text-bg-' + type + ' border-0 show mb-2';
+  div.innerHTML = '<div class="d-flex"><div class="toast-body">' + msg + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+  document.getElementById('alertContainer').appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+load();
+</script>
+<%- include('../partials/footer') %>

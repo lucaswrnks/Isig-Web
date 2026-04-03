@@ -1,0 +1,45 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+<div class="container py-4" style="max-width:500px">
+  <div class="card border-0 shadow">
+    <div class="card-header bg-warning"><h5 class="mb-0 fw-bold text-dark"><i class="bi bi-book me-2"></i><%= item?'Modifier':'Nouveau' %> cours</h5></div>
+    <div class="card-body p-4">
+      <div id="formError" class="alert alert-danger d-none"></div>
+      <div class="mb-3"><label class="form-label fw-semibold">Nom du cours *</label><input type="text" id="nom" class="form-control" placeholder="Développement Web"></div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Enseignant *</label>
+        <select id="id_enseignant" class="form-select"><option value="">-- Choisir un enseignant --</option></select>
+      </div>
+      <div class="d-flex gap-2">
+        <button id="saveBtn" class="btn btn-warning text-dark"><i class="bi bi-save me-1"></i>Enregistrer</button>
+        <a href="/cours" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const itemId=<%- JSON.stringify(item?.id||null) %>;
+async function init(){
+  const ensRes=await fetch('/api/enseignants');
+  const ens=await ensRes.json();
+  const sel=document.getElementById('id_enseignant');
+  ens.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.nom+' '+e.prenom;sel.appendChild(o);});
+  if(itemId){
+    const data=await(await fetch(`/api/cours/${itemId}`)).json();
+    document.getElementById('nom').value=data.nom||'';
+    sel.value=data.id_enseignant||'';
+  }
+}
+document.getElementById('saveBtn').addEventListener('click',async()=>{
+  const body={nom:document.getElementById('nom').value.trim(),id_enseignant:document.getElementById('id_enseignant').value};
+  const err=document.getElementById('formError');
+  if(!body.nom||!body.id_enseignant){err.textContent='Tous les champs sont obligatoires.';err.classList.remove('d-none');return;}
+  const res=await fetch(itemId?`/api/cours/${itemId}`:'/api/cours',{method:itemId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(res.ok)window.location.href='/cours';
+  else{err.textContent=data.message;err.classList.remove('d-none');}
+});
+init();
+</script>
+<%- include('../partials/footer') %>

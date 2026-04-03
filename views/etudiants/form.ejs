@@ -1,0 +1,147 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+<div class="container py-4" style="max-width:640px">
+  <div class="card border-0 shadow">
+    <div class="card-header text-white" style="background:#16a34a">
+      <h5 class="mb-0 fw-bold">
+        <i class="bi bi-person-<%= item ? 'gear' : 'plus' %>-fill me-2"></i>
+        <%= item ? "Modifier l'étudiant" : 'Nouvel étudiant' %>
+      </h5>
+    </div>
+    <div class="card-body p-4">
+      <div id="formError" class="alert alert-danger d-none"></div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+          <input type="text" id="nom" class="form-control" placeholder="Dupont">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Prénom <span class="text-danger">*</span></label>
+          <input type="text" id="prenom" class="form-control" placeholder="Alice">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Date de naissance <span class="text-danger">*</span></label>
+          <input type="date" id="dob" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Téléphone</label>
+          <input type="text" id="phone" class="form-control" placeholder="0612345678">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Email</label>
+          <input type="email" id="email" class="form-control" placeholder="alice@isig.fr">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Adresse</label>
+          <input type="text" id="adresse" class="form-control" placeholder="12 rue des Lilas, Paris">
+        </div>
+
+        <!-- NOUVEAU : Sélection formation puis classe -->
+        <div class="col-12"><hr class="my-1"><p class="fw-semibold mb-2"><i class="bi bi-mortarboard-fill me-1" style="color:#16a34a"></i>Scolarité</p></div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Formation</label>
+          <select id="id_formation" class="form-select">
+            <option value="">– Aucune –</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Classe</label>
+          <select id="id_classe" class="form-select">
+            <option value="">– Sélectionner une formation d'abord –</option>
+          </select>
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <button id="saveBtn" class="btn text-white" style="background:#16a34a">
+          <i class="bi bi-save me-1"></i>Enregistrer
+        </button>
+        <a href="/etudiants" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Retour
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const itemId = <%- JSON.stringify(item?.id || null) %>;
+let allClasses = [];
+
+async function loadFormations() {
+  const res   = await fetch('/api/formations', { credentials: 'include' });
+  const data  = await res.json();
+  const sel   = document.getElementById('id_formation');
+  sel.innerHTML = '<option value="">– Aucune –</option>' +
+    data.map(f => `<option value="${f.id}">[${f.type}] ${f.nom}</option>`).join('');
+}
+
+async function loadClasses() {
+  const res  = await fetch('/api/classes', { credentials: 'include' });
+  allClasses = await res.json();
+}
+
+function updateClasseSelect(idFormation, selectedId = '') {
+  const sel = document.getElementById('id_classe');
+  if (!idFormation) {
+    sel.innerHTML = '<option value="">– Sélectionner une formation d\'abord –</option>';
+    return;
+  }
+  const filtered = allClasses.filter(c => String(c.id_formation) === String(idFormation));
+  sel.innerHTML = '<option value="">– Aucune classe –</option>' +
+    filtered.map(c => `<option value="${c.id}" ${String(c.id) === String(selectedId) ? 'selected' : ''}>${c.nom} (${c.annee}ème année)</option>`).join('');
+}
+
+document.getElementById('id_formation').addEventListener('change', function() {
+  updateClasseSelect(this.value);
+});
+
+async function loadData() {
+  if (!itemId) return;
+  const res  = await fetch('/api/etudiants/' + itemId, { credentials: 'include' });
+  const data = await res.json();
+  document.getElementById('nom').value     = data.nom     || '';
+  document.getElementById('prenom').value  = data.prenom  || '';
+  document.getElementById('dob').value     = data.dob ? data.dob.substring(0,10) : '';
+  document.getElementById('phone').value   = data.phone   || '';
+  document.getElementById('email').value   = data.email   || '';
+  document.getElementById('adresse').value = data.adresse || '';
+
+  // Si la classe est connue, pré-sélectionner formation et classe
+  if (data.classe) {
+    document.getElementById('id_formation').value = data.classe.id_formation || '';
+    updateClasseSelect(data.classe.id_formation, data.id_classe);
+  }
+}
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const body = {
+    nom:       document.getElementById('nom').value.trim(),
+    prenom:    document.getElementById('prenom').value.trim(),
+    dob:       document.getElementById('dob').value,
+    phone:     document.getElementById('phone').value.trim(),
+    email:     document.getElementById('email').value.trim(),
+    adresse:   document.getElementById('adresse').value.trim(),
+    id_classe: document.getElementById('id_classe').value || null,
+  };
+  const err = document.getElementById('formError');
+  err.classList.add('d-none');
+  if (!body.nom || !body.prenom || !body.dob) {
+    err.textContent = 'Nom, prénom et date de naissance sont obligatoires.';
+    err.classList.remove('d-none'); return;
+  }
+  const url    = itemId ? '/api/etudiants/' + itemId : '/api/etudiants';
+  const method = itemId ? 'PUT' : 'POST';
+  const res    = await fetch(url, {
+    method, credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (res.ok) window.location.href = '/etudiants';
+  else { err.textContent = data.message; err.classList.remove('d-none'); }
+});
+
+Promise.all([loadFormations(), loadClasses()]).then(loadData);
+</script>
+<%- include('../partials/footer') %>

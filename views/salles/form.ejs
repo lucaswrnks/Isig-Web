@@ -1,0 +1,39 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+<div class="container py-4" style="max-width:500px">
+  <div class="card border-0 shadow">
+    <div class="card-header bg-danger text-white"><h5 class="mb-0 fw-bold"><i class="bi bi-building me-2"></i><%= item?'Modifier':'Nouvelle' %> salle</h5></div>
+    <div class="card-body p-4">
+      <div id="formError" class="alert alert-danger d-none"></div>
+      <div class="mb-3"><label class="form-label fw-semibold">Numéro de salle *</label><input type="text" id="numero" class="form-control" placeholder="A101"></div>
+      <div class="mb-3"><label class="form-label fw-semibold">Description</label><textarea id="description" class="form-control" rows="2" placeholder="Salle informatique..."></textarea></div>
+      <div class="mb-3"><label class="form-label fw-semibold">Nombre de places *</label><input type="number" id="nombre_chaises" class="form-control" min="0" placeholder="30"></div>
+      <div class="d-flex gap-2">
+        <button id="saveBtn" class="btn btn-danger"><i class="bi bi-save me-1"></i>Enregistrer</button>
+        <a href="/salles" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const itemId=<%- JSON.stringify(item?.id||null) %>;
+async function loadData(){
+  if(!itemId)return;
+  const d=await(await fetch(`/api/salles/${itemId}`)).json();
+  document.getElementById('numero').value=d.numero||'';
+  document.getElementById('description').value=d.description||'';
+  document.getElementById('nombre_chaises').value=d.nombre_chaises||0;
+}
+document.getElementById('saveBtn').addEventListener('click',async()=>{
+  const body={numero:document.getElementById('numero').value.trim(),description:document.getElementById('description').value.trim(),nombre_chaises:parseInt(document.getElementById('nombre_chaises').value)};
+  const err=document.getElementById('formError');
+  if(!body.numero){err.textContent='Le numéro est obligatoire.';err.classList.remove('d-none');return;}
+  const res=await fetch(itemId?`/api/salles/${itemId}`:'/api/salles',{method:itemId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(res.ok)window.location.href='/salles';
+  else{err.textContent=data.message;err.classList.remove('d-none');}
+});
+loadData();
+</script>
+<%- include('../partials/footer') %>

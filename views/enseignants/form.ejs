@@ -1,0 +1,78 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+<div class="container py-4" style="max-width:600px">
+  <div class="card border-0 shadow">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0 fw-bold">
+        <i class="bi bi-person-workspace me-2"></i>
+        <%= item ? 'Modifier' : 'Nouvel' %> enseignant
+      </h5>
+    </div>
+    <div class="card-body p-4">
+      <div id="formError" class="alert alert-danger d-none"></div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Nom *</label>
+          <input type="text" id="nom" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Prénom *</label>
+          <input type="text" id="prenom" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Date de naissance *</label>
+          <input type="date" id="dob" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Téléphone</label>
+          <input type="text" id="phone" class="form-control">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Email</label>
+          <input type="email" id="email" class="form-control" placeholder="jean.leclerc@gmail.com">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Adresse</label>
+          <input type="text" id="adresse" class="form-control">
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <button id="saveBtn" class="btn btn-success"><i class="bi bi-save me-1"></i>Enregistrer</button>
+        <a href="/enseignants" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const itemId = <%- JSON.stringify(item?.id||null) %>;
+async function loadData() {
+  if (!itemId) return;
+  const data = await (await fetch('/api/enseignants/' + itemId, { credentials: 'include' })).json();
+  ['nom','prenom','phone','email','adresse'].forEach(f => document.getElementById(f).value = data[f] || '');
+  document.getElementById('dob').value = data.dob ? data.dob.substring(0,10) : '';
+}
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const body = {
+    nom:     document.getElementById('nom').value.trim(),
+    prenom:  document.getElementById('prenom').value.trim(),
+    dob:     document.getElementById('dob').value,
+    phone:   document.getElementById('phone').value.trim(),
+    email:   document.getElementById('email').value.trim(),
+    adresse: document.getElementById('adresse').value.trim(),
+  };
+  const err = document.getElementById('formError');
+  if (!body.nom || !body.prenom || !body.dob) {
+    err.textContent = 'Nom, prénom et date requis.';
+    err.classList.remove('d-none'); return;
+  }
+  const url    = itemId ? '/api/enseignants/' + itemId : '/api/enseignants';
+  const method = itemId ? 'PUT' : 'POST';
+  const res    = await fetch(url, { method, credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data   = await res.json();
+  if (res.ok) window.location.href = '/enseignants';
+  else { err.textContent = data.message; err.classList.remove('d-none'); }
+});
+loadData();
+</script>
+<%- include('../partials/footer') %>

@@ -1,0 +1,84 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<%- include('partials/alerts') %>
+
+<div class="container-fluid py-4">
+  <!-- Hero -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="p-4 rounded-3 bg-primary text-white shadow">
+        <h1 class="display-6 fw-bold"><i class="bi bi-mortarboard-fill me-2"></i>Tableau de bord</h1>
+        <p class="mb-0">Bienvenue, <strong><%= locals.user?.prenom || locals.user?.username %></strong> &mdash; <span class="badge bg-warning text-dark"><%= locals.user?.role %></span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats cards -->
+  <div class="row g-3 mb-4" id="statsRow">
+    <% const cards = [
+      { label:'Étudiants',   icon:'people',              url:'/etudiants',   api:'/api/etudiants',   color:'primary' },
+      { label:'Enseignants', icon:'person-workspace',    url:'/enseignants', api:'/api/enseignants', color:'success' },
+      { label:'Cours',       icon:'book',                url:'/cours',       api:'/api/cours',       color:'warning' },
+      { label:'Notes',       icon:'clipboard-data',      url:'/notes',       api:'/api/notes',       color:'info' },
+      { label:'Salles',      icon:'building',            url:'/salles',      api:'/api/salles',      color:'danger' },
+      { label:'Contacts',    icon:'person-lines-fill',   url:'/contacts',    api:'/api/contacts',    color:'secondary' },
+    ]; %>
+    <% cards.forEach(c => { %>
+    <div class="col-6 col-md-4 col-xl-2">
+      <a href="<%= c.url %>" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100 stat-card" data-api="<%= c.api %>">
+          <div class="card-body text-center py-3">
+            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-2 bg-<%= c.color %> bg-opacity-10" style="width:48px;height:48px">
+              <i class="bi bi-<%= c.icon %> fs-4 text-<%= c.color %>"></i>
+            </div>
+            <h3 class="fw-bold mb-0 count-val">–</h3>
+            <small class="text-muted"><%= c.label %></small>
+          </div>
+        </div>
+      </a>
+    </div>
+    <% }) %>
+  </div>
+
+  <!-- Quick access -->
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white fw-bold"><i class="bi bi-lightning-fill text-warning me-2"></i>Accès rapide</div>
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-2">
+            <a href="/etudiants/new"   class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Étudiant</a>
+            <a href="/enseignants/new" class="btn btn-outline-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Enseignant</a>
+            <a href="/cours/new"       class="btn btn-outline-warning btn-sm"><i class="bi bi-plus-circle me-1"></i>Cours</a>
+            <a href="/notes/new"       class="btn btn-outline-info btn-sm"><i class="bi bi-plus-circle me-1"></i>Note</a>
+            <a href="/salles/new"      class="btn btn-outline-danger btn-sm"><i class="bi bi-plus-circle me-1"></i>Salle</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white fw-bold"><i class="bi bi-info-circle text-primary me-2"></i>Informations</div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0 small">
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Base de données connectée</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Authentification JWT active</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>API REST disponible sur /api</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.stat-card').forEach(async card => {
+  try {
+    const res  = await fetch(card.dataset.api);
+    const data = await res.json();
+    card.querySelector('.count-val').textContent = Array.isArray(data) ? data.length : '–';
+  } catch { card.querySelector('.count-val').textContent = '?'; }
+});
+</script>
+
+<%- include('partials/footer') %>

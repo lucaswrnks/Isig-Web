@@ -1,0 +1,9 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container text-center py-5">
+  <h1 class="display-1 fw-bold text-danger">500</h1>
+  <h3>Erreur serveur</h3>
+  <p class="text-muted"><%= error?.message || 'Une erreur inattendue s\'est produite.' %></p>
+  <a href="/" class="btn btn-primary"><i class="bi bi-house me-1"></i>Retour à l'accueil</a>
+</div>
+<%- include('partials/footer') %>

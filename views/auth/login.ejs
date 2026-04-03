@@ -1,0 +1,81 @@
+<%- include('../partials/head') %>
+<%- include('../partials/alerts') %>
+
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+  <div class="card shadow border-0" style="width:100%;max-width:420px">
+    <div class="card-header bg-primary text-white text-center py-4">
+      <i class="bi bi-mortarboard-fill fs-1"></i>
+      <h4 class="mt-2 mb-0 fw-bold">ISIG - Paris</h4>
+      <small>Gestion Universitaire</small>
+    </div>
+    <div class="card-body p-4">
+      <h5 class="mb-3 fw-semibold">Connexion</h5>
+      <div id="loginError" class="alert alert-danger d-none"></div>
+
+      <div class="mb-3">
+        <label class="form-label">Adresse email</label>
+        <input type="email" id="email" class="form-control" placeholder="admin@gmail.com">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Mot de passe</label>
+        <div class="input-group">
+          <input type="password" id="password" class="form-control" placeholder="••••••••">
+          <button class="btn btn-outline-secondary" type="button" id="togglePwd">
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
+      </div>
+      <button id="loginBtn" class="btn btn-primary w-100 py-2 fw-bold">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+      </button>
+      <p class="text-center text-muted mt-3 mb-0 small">
+        <i class="bi bi-lock-fill me-1"></i>Accès réservé au personnel autorisé
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('togglePwd').addEventListener('click', () => {
+  const pwd = document.getElementById('password');
+  pwd.type = pwd.type === 'password' ? 'text' : 'password';
+});
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errDiv   = document.getElementById('loginError');
+  const btn      = document.getElementById('loginBtn');
+
+  if (!email || !password) {
+    errDiv.textContent = 'Veuillez remplir tous les champs.';
+    errDiv.classList.remove('d-none');
+    return;
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Connexion...';
+
+  try {
+    const res  = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      window.location.href = '/';
+    } else {
+      errDiv.textContent = data.message || 'Identifiants incorrects';
+      errDiv.classList.remove('d-none');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Se connecter';
+    }
+  } catch {
+    errDiv.textContent = 'Erreur réseau';
+    errDiv.classList.remove('d-none');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Se connecter';
+  }
+});
+</script>
+<%- include('../partials/footer') %>
