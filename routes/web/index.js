@@ -2,7 +2,7 @@ const router = require('express').Router();
 const auth   = require('../../middlewares/auth');
 
 router.get('/', auth([]), (req, res) => {
-  res.render('index', { title: 'Accueil – ISIG - Paris', user: req.user });
+  res.render('index', { title: 'Accueil', user: req.user });
 });
 
 router.get('/login',    (req, res) => res.render('auth/login',    { title: 'Connexion' }));

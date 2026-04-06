@@ -11,8 +11,23 @@
   <div class="card border-0 shadow-sm mb-3"><div class="card-body py-2"><input type="text" id="searchInput" class="form-control" placeholder="🔍 Rechercher..."></div></div>
   <div class="card border-0 shadow-sm"><div class="card-body p-0"><div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
-      <thead class="table-warning"><tr><th>#</th><th>Nom du cours</th><th>Enseignant</th><th class="text-center">Actions</th></tr></thead>
-      <tbody id="tableBody"><tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-warning"></div></td></tr></tbody>
+      <thead class="table-warning">
+  <tr>
+    <th>#</th>
+    <th>Nom du cours</th>
+    <th>Enseignant</th>
+    <% if (locals.user && locals.user.role === 'admin') { %>
+    <th class="text-center">Actions</th>
+    <% } %>
+  </tr>
+</thead>
+<tbody id="tableBody">
+  <tr>
+    <td colspan="<%= (locals.user && locals.user.role === 'admin') ? 4 : 3 %>" class="text-center py-4">
+      <div class="spinner-border text-warning"></div>
+    </td>
+  </tr>
+</tbody>
     </table>
   </div></div></div>
 </div>
@@ -29,18 +44,23 @@ let allData = []; let deleteId = null;
 const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
 function render(data) {
-  const tb = document.getElementById('tableBody');
-  if (!data.length) { tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Aucun cours</td></tr>'; return; }
-  tb.innerHTML = data.map(c => `<tr>
-    <td><span class="badge bg-warning text-dark">${c.id}</span></td>
-    <td class="fw-semibold">${c.nom}</td>
-    <td>${c.enseignant ? c.enseignant.nom + ' ' + c.enseignant.prenom : '–'}</td>
-    <td class="text-center">
-      ${isAdmin ? `
-      <a href="/cours/${c.id}/edit" class="btn btn-sm btn-outline-warning me-1"><i class="bi bi-pencil-fill"></i></a>
-      <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${c.id})"><i class="bi bi-trash-fill"></i></button>
-      ` : '<span class="text-muted small">–</span>'}
-    </td></tr>`).join('');
+  const tb = document.getElementById('tableBody');
+  if (!data.length) { 
+    // Colspan dynamique : 4 pour admin, 3 pour les autres
+    tb.innerHTML = `<tr><td colspan="${isAdmin ? 4 : 3}" class="text-center text-muted py-4">Aucun cours</td></tr>`; 
+    return; 
+  }
+  tb.innerHTML = data.map(c => `<tr>
+    <td><span class="badge bg-warning text-dark">${c.id}</span></td>
+    <td class="fw-semibold">${c.nom}</td>
+    <td>${c.enseignant ? c.enseignant.nom + ' ' + c.enseignant.prenom : '–'}</td>
+    ${isAdmin ? `
+    <td class="text-center">
+      <a href="/cours/${c.id}/edit" class="btn btn-sm btn-outline-warning me-1"><i class="bi bi-pencil-fill"></i></a>
+      <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${c.id})"><i class="bi bi-trash-fill"></i></button>
+    </td>
+    ` : ''}
+  </tr>`).join('');
 }
 
 async function load() {

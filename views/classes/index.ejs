@@ -36,21 +36,25 @@
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
-            <tr>
-              <th>#</th>
-              <th>Classe</th>
-              <th>Année</th>
-              <th>Formation</th>
-              <th>Type</th>
-              <th>Étudiants</th>
-              <th class="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-            <tr><td colspan="7" class="text-center py-4">
-              <div class="spinner-border" style="color:#16a34a"></div>
-            </td></tr>
-          </tbody>
+  <tr>
+    <th>#</th>
+    <th>Classe</th>
+    <th>Année</th>
+    <th>Formation</th>
+    <th>Type</th>
+    <th>Étudiants</th>
+    <% if (locals.user && locals.user.role === 'admin') { %>
+    <th class="text-center">Actions</th>
+    <% } %>
+  </tr>
+</thead>
+<tbody id="tableBody">
+  <tr>
+    <td colspan="<%= (locals.user && locals.user.role === 'admin') ? 7 : 6 %>" class="text-center py-4">
+      <div class="spinner-border" style="color:#16a34a"></div>
+    </td>
+  </tr>
+</tbody>
         </table>
       </div>
     </div>
@@ -93,7 +97,8 @@ const TYPE_STYLES = {
 function render(data) {
   const tbody = document.getElementById('tableBody');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Aucune classe trouvée</td></tr>';
+    // Colspan dynamique : 7 pour admin, 6 pour les autres
+    tbody.innerHTML = `<tr><td colspan="${isAdmin ? 7 : 6}" class="text-center text-muted py-4">Aucune classe trouvée</td></tr>`;
     return;
   }
   tbody.innerHTML = data.map(c => {
@@ -110,15 +115,15 @@ function render(data) {
           <i class="bi bi-people me-1"></i>Voir étudiants
         </a>
       </td>
+      ${isAdmin ? `
       <td class="text-center">
-        ${isAdmin ? `
         <a href="/classes/${c.id}/edit" class="btn btn-sm btn-outline-warning me-1">
           <i class="bi bi-pencil-fill"></i>
         </a>
         <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${c.id})">
           <i class="bi bi-trash-fill"></i>
-        </button>` : '–'}
-      </td>
+        </button>
+      </td>` : ''}
     </tr>`;
   }).join('');
 }

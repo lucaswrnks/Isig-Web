@@ -80,7 +80,7 @@ if (require.main === module) {
       await sequelize.authenticate();
       console.log('✅ Connecté à MySQL "university"');
       const PORT = process.env.PORT || 3001;
-      app.listen(PORT, () => console.log(`🚀 http://localhost:${PORT}`));
+      app.listen(PORT, () => console.log(`🚀 https://localhost:${PORT}`));
     } catch (err) {
       console.error('❌ Erreur MySQL :', err.message);
       process.exit(1);

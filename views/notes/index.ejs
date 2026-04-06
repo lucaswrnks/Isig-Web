@@ -17,7 +17,7 @@
   <div class="card border-0 shadow-sm"><div class="card-body p-0"><div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
       <thead class="table-info">
-        <tr><th>#</th><th>Étudiant</th><th>Cours</th><th>Note</th><th>Appréciation</th><th class="text-center">Actions</th></tr>
+        <tr><th>#</th><th>Étudiant</th><th>Cours</th><th>Note</th><th>Appréciation</th> <% if (locals.user && locals.user.role === 'admin') { %><th class="text-center">Actions</th><% } %></tr>
       </thead>
       <tbody id="tableBody"><tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-info"></div></td></tr></tbody>
     </table>
@@ -44,20 +44,25 @@ function mention(n) {
 }
 
 function render(data) {
-  const tb = document.getElementById('tableBody');
-  if (!data.length) { tb.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Aucune note</td></tr>'; return; }
-  tb.innerHTML = data.map(n => `<tr>
-    <td><span class="badge bg-info text-dark">${n.id}</span></td>
-    <td class="fw-semibold">${n.etudiant ? n.etudiant.nom + ' ' + n.etudiant.prenom : '–'}</td>
-    <td>${n.cours ? n.cours.nom : '–'}</td>
-    <td><strong>${n.note}/20</strong></td>
-    <td>${mention(n.note)}</td>
-    <td class="text-center">
-      ${isAdmin ? `
-      <a href="/notes/${n.id}/edit" class="btn btn-sm btn-outline-warning me-1"><i class="bi bi-pencil-fill"></i></a>
-      <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${n.id})"><i class="bi bi-trash-fill"></i></button>
-      ` : '<span class="text-muted small">–</span>'}
-    </td></tr>`).join('');
+  const tb = document.getElementById('tableBody');
+  if (!data.length) { 
+    // On ajuste le colspan : 6 pour admin, 5 pour les autres
+    tb.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" class="text-center text-muted py-4">Aucune note</td></tr>`; 
+    return; 
+  }
+  tb.innerHTML = data.map(n => `<tr>
+    <td><span class="badge bg-info text-dark">${n.id}</span></td>
+    <td class="fw-semibold">${n.etudiant ? n.etudiant.nom + ' ' + n.etudiant.prenom : '–'}</td>
+    <td>${n.cours ? n.cours.nom : '–'}</td>
+    <td><strong>${n.note}/20</strong></td>
+    <td>${mention(n.note)}</td>
+    ${isAdmin ? `
+    <td class="text-center">
+      <a href="/notes/${n.id}/edit" class="btn btn-sm btn-outline-warning me-1"><i class="bi bi-pencil-fill"></i></a>
+      <button class="btn btn-sm btn-outline-danger" onclick="askDelete(${n.id})"><i class="bi bi-trash-fill"></i></button>
+    </td>
+    ` : ''}
+  </tr>`).join('');
 }
 
 async function load() {
