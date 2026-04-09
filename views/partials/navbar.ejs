@@ -35,8 +35,12 @@
         </li>
 
         <% if (locals.user.role === 'admin') { %>
-        <li class="nav-item"><a class="nav-link" href="/users"><i class="bi bi-shield-person me-1"></i>Utilisateurs</a></li>
-        <% } %>
+<li class="nav-item">
+  <a class="nav-link" href="/users">
+    <i class="bi bi-people-fill me-1"></i>Utilisateurs
+  </a>
+</li>
+<% } %>
         <% } %>
       </ul>
       <ul class="navbar-nav ms-auto">
