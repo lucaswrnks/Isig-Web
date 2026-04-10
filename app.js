@@ -46,6 +46,7 @@ app.use('/api/users',       require('./routes/api/users'));
 app.use('/api/sessions',    require('./routes/api/sessions'));
 app.use('/api/formations',  require('./routes/api/formations'));
 app.use('/api/classes',     require('./routes/api/classes'));
+app.use('/api/avis-formations', require('./routes/api/avisFormations'));
 
 // ── Routes Web (EJS) ─────────────────────────────────────────────────────────
 app.use('/',             require('./routes/web/index'));
@@ -59,6 +60,7 @@ app.use('/users',        require('./routes/web/users'));
 app.use('/sessions',     require('./routes/web/sessions'));
 app.use('/formations',   require('./routes/web/formations'));
 app.use('/classes',      require('./routes/web/classes'));
+app.use('/avis-formations', require('./routes/web/avisFormations'));
 
 // ── Erreur 404 ────────────────────────────────────────────────────────────────
 app.use((req, res) => {

@@ -8,7 +8,7 @@
     <div class="col-12">
       <div class="p-4 rounded-3 bg-primary text-white shadow">
         <h1 class="display-6 fw-bold"><i class="bi bi-mortarboard-fill me-2"></i>Tableau de bord</h1>
-        <p class="mb-0">Bienvenue, <strong><%= locals.user?.prenom || locals.user?.username %></strong> &mdash; <span class="badge bg-warning text-dark"><%= locals.user?.role %></span></p>
+        <p class="mb-0">Bienvenue, <strong><%= locals.user?.prenom || locals.user?.username %></strong> - <span class="badge bg-warning text-dark"><%= locals.user?.role === 'etudiant' ? 'Étudiant' : locals.user?.role === 'enseignant' ? 'Enseignant' : locals.user?.role === 'administratif' ? 'Administratif' : 'Admin' %></span></p>
       </div>
     </div>
   </div>

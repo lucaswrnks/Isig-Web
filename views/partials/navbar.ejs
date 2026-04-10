@@ -34,6 +34,10 @@
           </ul>
         </li>
 
+        <li class="nav-item">
+  <a class="nav-link" href="/avis-formations">⭐ Avis</a>
+</li>
+
         <% if (locals.user.role === 'admin') { %>
 <li class="nav-item">
   <a class="nav-link" href="/users">
@@ -49,7 +53,7 @@
           <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
             <i class="bi bi-person-circle"></i>
             <span><%= locals.user.prenom || locals.user.username %></span>
-            <span class="badge"><%= locals.user.role %></span>
+            <span class="badge"><%= locals.user.role === 'etudiant' ? 'Étudiant' : locals.user.role === 'enseignant' ? 'Enseignant' : locals.user.role === 'administratif' ? 'Administratif' : 'Admin' %></span>
           </a>
           <ul class="dropdown-menu dropdown-menu-end">
             <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Profil</a></li>

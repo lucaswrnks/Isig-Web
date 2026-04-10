@@ -1,0 +1,129 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<%- include('../partials/alerts') %>
+
+<div id="userData" data-userid="<%= locals.user ? locals.user.id : 0 %>" style="display:none"></div>
+
+<div class="container py-4">
+  <h2 class="fw-bold mb-4">⭐ Avis sur les formations</h2>
+
+  <!-- Formulaire (étudiants seulement) -->
+  <% if (locals.user && locals.user.role === 'etudiant') { %>
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Donner mon avis</h5>
+      <form id="avisForm">
+        <div class="row mb-3">
+          <div class="col">
+            <label class="form-label">Formation</label>
+            <select id="formationSelect" class="form-select" required>
+              <option value="">Choisir une formation...</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <label class="form-label">Note</label>
+            <select id="noteSelect" class="form-select" required>
+              <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+              <option value="4">⭐⭐⭐⭐ (4)</option>
+              <option value="3">⭐⭐⭐ (3)</option>
+              <option value="2">⭐⭐ (2)</option>
+              <option value="1">⭐ (1)</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Commentaire</label>
+          <textarea id="commentaire" class="form-control" rows="2" placeholder="Votre avis..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Envoyer mon avis</button>
+      </form>
+      <div id="msg" class="mt-2"></div>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Liste visible par tout le monde -->
+  <div id="listeAvis">Chargement...</div>
+</div>
+
+<script>
+const currentUserId = document.getElementById('userData').dataset.userid;
+
+// Charger les formations dans le select
+fetch('/api/formations', { credentials: 'include' })
+  .then(r => r.json())
+  .then(formations => {
+    const sel = document.getElementById('formationSelect');
+    if (sel) {
+      formations.forEach(f => {
+        sel.innerHTML += '<option value="' + f.id + '">[' + f.type + '] ' + f.nom + '</option>';
+      });
+    }
+  });
+
+function etoiles(n) {
+  return '⭐'.repeat(n) + '☆'.repeat(5 - n);
+}
+
+function chargerAvis() {
+  Promise.all([
+    fetch('/api/avis-formations', { credentials: 'include' }).then(r => r.json()),
+    fetch('/api/formations', { credentials: 'include' }).then(r => r.json())
+  ]).then(([avis, formations]) => {
+    const div = document.getElementById('listeAvis');
+    if (avis.length === 0) {
+      div.innerHTML = '<p class="text-muted">Aucun avis pour le moment.</p>';
+      return;
+    }
+
+    // Map id → nom formation
+    const formMap = {};
+    formations.forEach(f => formMap[f.id] = '[' + f.type + '] ' + f.nom);
+
+    div.innerHTML = avis.map(a => `
+      <div class="card mb-2">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <strong>${formMap[a.id_formation] || 'Formation inconnue'}</strong>
+            <span>${etoiles(a.note)}</span>
+          </div>
+          <p class="mb-1">${a.commentaire || '<em>Pas de commentaire</em>'}</p>
+          <small class="text-muted">Étudiant #${a.id_etudiant}</small>
+        </div>
+      </div>
+    `).join('');
+  });
+}
+
+chargerAvis();
+
+const form = document.getElementById('avisForm');
+if (form) {
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch('/api/avis-formations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        id_etudiant: currentUserId,
+        id_formation: document.getElementById('formationSelect').value,
+        note: document.getElementById('noteSelect').value,
+        commentaire: document.getElementById('commentaire').value
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.id) {
+        document.getElementById('msg').innerHTML = '<div class="alert alert-success">Avis envoyé !</div>';
+        form.reset();
+        chargerAvis();
+      } else {
+        document.getElementById('msg').innerHTML = '<div class="alert alert-danger">' + data.message + '</div>';
+      }
+    });
+  });
+}
+</script>
+
+<%- include('../partials/footer') %>
