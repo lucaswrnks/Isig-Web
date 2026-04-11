@@ -2,8 +2,8 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Hôte : localhost
--- Généré le : jeu. 02 avr. 2026 à 16:47
+-- Hôte : 127.0.0.1
+-- Généré le : sam. 11 avr. 2026 à 22:09
 -- Version du serveur : 10.4.32-MariaDB
 -- Version de PHP : 8.2.12
 
@@ -20,6 +20,44 @@ SET time_zone = "+00:00";
 --
 -- Base de données : `university`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `avis_formation`
+--
+
+CREATE TABLE `avis_formation` (
+  `id` int(11) NOT NULL,
+  `id_etudiant` int(11) NOT NULL,
+  `id_formation` int(11) NOT NULL,
+  `note` int(11) NOT NULL CHECK (`note` between 1 and 5),
+  `commentaire` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `avis_formation`
+--
+
+INSERT INTO `avis_formation` (`id`, `id_etudiant`, `id_formation`, `note`, `commentaire`, `created_at`) VALUES
+(1, 1, 1, 5, 'Excellente formation, très complète', '2026-04-11 11:12:58'),
+(2, 2, 1, 4, 'Bons cours, profs disponibles', '2026-04-11 11:12:58'),
+(3, 3, 1, 3, 'Correct mais manque de pratique', '2026-04-11 11:12:58'),
+(4, 4, 2, 4, 'Très bien pour les réseaux', '2026-04-11 11:12:58'),
+(5, 5, 2, 5, 'Formation au top', '2026-04-11 11:12:58'),
+(6, 7, 1, 4, 'Je recommande', '2026-04-11 11:12:58'),
+(7, 8, 3, 3, 'Bien mais trop court', '2026-04-11 11:12:58'),
+(8, 9, 3, 5, 'Super formation dev web', '2026-04-11 11:12:58'),
+(9, 10, 4, 2, 'Pas assez de TP', '2026-04-11 11:12:58'),
+(10, 11, 4, 4, 'Bonne formation cybersécurité', '2026-04-11 11:12:58'),
+(11, 12, 5, 3, 'Contenu intéressant', '2026-04-11 11:12:58'),
+(12, 1, 6, 5, 'Génie logiciel très complet', '2026-04-11 11:12:58'),
+(13, 2, 7, 4, 'Bonne formation réseaux', '2026-04-11 11:12:58'),
+(14, 3, 8, 5, 'Master excellent', '2026-04-11 11:12:58'),
+(15, 4, 9, 4, 'Data science bien encadré', '2026-04-11 11:12:58'),
+(16, 5, 10, 3, 'Correct, peut mieux faire', '2026-04-11 11:12:58'),
+(17, 12, 10, 4, 'Super!', '2026-04-11 09:24:15');
 
 -- --------------------------------------------------------
 
@@ -134,7 +172,25 @@ INSERT INTO `cours_classe` (`id_cours`, `id_classe`) VALUES
 (3, 1),
 (3, 2),
 (3, 3),
-(3, 4);
+(3, 4),
+(4, 5),
+(4, 6),
+(4, 7),
+(5, 3),
+(5, 4),
+(6, 3),
+(6, 4),
+(7, 1),
+(7, 2),
+(7, 3),
+(7, 4),
+(8, 1),
+(8, 2),
+(9, 8),
+(9, 9),
+(9, 10),
+(10, 16),
+(10, 17);
 
 -- --------------------------------------------------------
 
@@ -162,7 +218,8 @@ INSERT INTO `enseignant` (`id`, `nom`, `prenom`, `adresse`, `dob`, `phone`, `ema
 (3, 'Girard', 'Nathalie', '18 rue Gambetta, Marseille', '1978-12-03', '0688990011', 'n.girard@isig.fr'),
 (4, 'Bonnet', 'Sébastien', '2 place du Marché, Toulouse', '1982-08-10', '0699001122', 's.bonnet@isig.fr'),
 (5, 'Chevalier', 'Isabelle', '33 rue de la République, Strasbourg', '1985-02-27', '0600112233', 'i.chevalier@isig.fr'),
-(6, 'Morin', 'Julien', '7 avenue Jean Jaurès, Bordeaux', '1979-06-14', '0611223300', 'j.morin@isig.fr');
+(6, 'Morin', 'Julien', '7 avenue Jean Jaurès, Bordeaux', '1979-06-14', '0611223300', 'j.morin@isig.fr'),
+(7, 'Gates', 'Bill(invité)', 'USA', '2026-04-06', '0000000000', NULL);
 
 -- --------------------------------------------------------
 
@@ -188,16 +245,16 @@ CREATE TABLE `etudiant` (
 INSERT INTO `etudiant` (`id`, `nom`, `prenom`, `adresse`, `dob`, `phone`, `email`, `id_classe`) VALUES
 (1, 'Dupont', 'Alice', '12 rue des Lilas, Toulouse', '2001-03-15', '0612345678', 'alice.dupont@isig.fr', 1),
 (2, 'Martin', 'Baptiste', '5 allée des Roses, Toulouse', '2000-07-22', '0623456789', 'baptiste.martin@isig.fr', 1),
-(3, 'Bernard', 'Clara', '8 avenue Victor Hugo, Toulouse', '2002-01-10', '0634567890', 'clara.bernard@isig.fr', 2),
+(3, 'Bernard', 'Clara', '8 avenue Victor Hugo, Marseille', '2002-01-10', '0634567890', 'clara.bernard@isig.fr', 2),
 (4, 'Leroy', 'David', '3 impasse des Pins, Toulouse', '2001-11-05', '0645678901', 'david.leroy@isig.fr', 3),
 (5, 'Moreau', 'Emma', '27 rue Nationale, Toulouse', '2000-05-18', '0656789012', 'emma.moreau@isig.fr', 4),
-(6, 'Lucas', 'Lucas', 'Toulon', '2003-03-29', '0623520254', 'lucas@isig.fr', 2),
 (7, 'Durand', 'Sophie', '14 rue Pasteur, Paris', '2002-05-12', '0611223344', 'sophie.durand@isig.fr', 5),
 (8, 'Lambert', 'Thomas', '8 avenue Foch, Lyon', '2001-09-23', '0622334455', 'thomas.lambert@isig.fr', 6),
 (9, 'Petit', 'Camille', '3 rue Voltaire, Bordeaux', '2003-01-08', '0633445566', 'camille.petit@isig.fr', 11),
 (10, 'Rousseau', 'Hugo', '21 boulevard Victor Hugo, Nantes', '2002-12-02', '0644556677', 'hugo.rousseau@isig.fr', 14),
 (11, 'Fontaine', 'Léa', '5 impasse des Acacias, Lille', '2001-03-18', '0655667788', 'lea.fontaine@isig.fr', 8),
-(12, 'Martin', 'Dorian', '15 avenue de benoit', '1999-03-04', '0623145287', 'dorian@isig.fr', 16);
+(12, 'Martin', 'Dorian', '15 avenue de benoit', '1999-03-04', '0623145287', 'dorian@isig.fr', 16),
+(14, 'Marin', 'Mathieu', '17 rue des romarins, Nice', '1998-04-15', '0701123458', 'm.mathieu@isig.fr', 2);
 
 -- --------------------------------------------------------
 
@@ -287,14 +344,6 @@ INSERT INTO `note` (`id`, `id_etudiant`, `id_cours`, `note`) VALUES
 (38, 5, 6, 15),
 (39, 5, 7, 13),
 (40, 5, 8, 16),
-(41, 6, 1, 13),
-(42, 6, 2, 15),
-(43, 6, 3, 11),
-(44, 6, 4, 14),
-(45, 6, 5, 16),
-(46, 6, 6, 12),
-(47, 6, 7, 14),
-(48, 6, 8, 11),
 (49, 7, 1, 12),
 (50, 7, 2, 14),
 (51, 7, 3, 15),
@@ -338,7 +387,8 @@ INSERT INTO `note` (`id`, `id_etudiant`, `id_cours`, `note`) VALUES
 (89, 2, 1, 11),
 (90, 1, 1, 13),
 (91, 1, 1, 12),
-(92, 1, 1, 17.5);
+(92, 1, 1, 17.5),
+(93, 1, 1, 15);
 
 -- --------------------------------------------------------
 
@@ -399,18 +449,8 @@ INSERT INTO `session` (`id`, `titre`, `description`, `date_debut`, `date_fin`, `
 (9, 'CM Réseaux', 'Protocoles TCP/IP et modèle OSI', '2026-03-20 08:00:00', '2026-03-20 10:00:00', 5, 5, 3, 80),
 (10, 'TD Réseaux', 'Configuration de routeurs', '2026-03-20 14:00:00', '2026-03-20 16:00:00', 5, 2, 3, 30),
 (11, 'CM Sécurité informatique', 'Cryptographie et protocoles sécurisés', '2026-03-23 08:00:00', '2026-03-23 10:00:00', 9, 5, 5, 80),
-(12, 'TD Gestion de projet', 'Méthodes Agile et Scrum', '2026-03-24 13:00:00', '2026-03-24 15:00:00', 8, 6, 4, 16);
-
--- --------------------------------------------------------
-
---
--- Structure de la table `session_classe`
---
-
-CREATE TABLE `session_classe` (
-  `id_session` int(11) NOT NULL,
-  `id_classe` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+(12, 'TD Gestion de projet', 'Méthodes Agile et Scrum', '2026-03-24 13:00:00', '2026-03-24 15:00:00', 8, 6, 4, 16),
+(19, 'Conférence avec Bill Gates', 'Bill Gates, cofondateur de Microsoft, donnera une conférence exceptionnelle sur l\'innovation technologique et l\'impact du numérique dans le monde.', '2026-05-20 12:00:00', '2026-05-20 13:30:00', 9, 1, 7, 60);
 
 -- --------------------------------------------------------
 
@@ -431,7 +471,7 @@ INSERT INTO `session_etudiant` (`id_session`, `id_etudiant`) VALUES
 (1, 1),
 (1, 2),
 (1, 3),
-(1, 6),
+(1, 5),
 (1, 7),
 (2, 4),
 (2, 5),
@@ -439,7 +479,6 @@ INSERT INTO `session_etudiant` (`id_session`, `id_etudiant`) VALUES
 (2, 9),
 (3, 1),
 (3, 2),
-(3, 6),
 (3, 10),
 (3, 11),
 (4, 3),
@@ -447,7 +486,6 @@ INSERT INTO `session_etudiant` (`id_session`, `id_etudiant`) VALUES
 (4, 8),
 (5, 1),
 (5, 5),
-(5, 6),
 (5, 7),
 (5, 10),
 (6, 2),
@@ -456,13 +494,11 @@ INSERT INTO `session_etudiant` (`id_session`, `id_etudiant`) VALUES
 (7, 1),
 (7, 2),
 (7, 3),
-(7, 6),
 (7, 11),
 (8, 4),
 (8, 5),
 (8, 8),
 (9, 1),
-(9, 6),
 (9, 7),
 (9, 10),
 (9, 11),
@@ -471,14 +507,23 @@ INSERT INTO `session_etudiant` (`id_session`, `id_etudiant`) VALUES
 (10, 4),
 (10, 9),
 (11, 5),
-(11, 6),
 (11, 7),
 (11, 8),
 (12, 1),
 (12, 3),
-(12, 6),
 (12, 9),
-(12, 11);
+(12, 11),
+(19, 1),
+(19, 2),
+(19, 3),
+(19, 4),
+(19, 5),
+(19, 7),
+(19, 8),
+(19, 9),
+(19, 10),
+(19, 11),
+(19, 12);
 
 -- --------------------------------------------------------
 
@@ -509,8 +554,8 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `role`, `status`, `nom`, `prenom`, `phone`, `adresse`, `lastLogin`, `resetPasswordToken`, `resetPasswordExpires`, `createdAt`, `updatedAt`) VALUES
-(1, 'admin', 'admin@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'active', 'Admin', 'ADMIN', NULL, NULL, '2026-04-01 09:33:24', NULL, NULL, '2026-03-12 18:09:02', '2026-04-01 09:33:24'),
-(2, 'b.jean', 'b.jean@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'enseignant', 'active', 'Jean', 'Benoit', '0666778899', '10 rue de la Paix, Paris', '2026-03-27 14:34:53', NULL, NULL, '2026-03-12 18:09:02', '2026-03-27 14:34:53'),
+(1, 'admin', 'admin@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'active', 'Admin', 'ADMIN', NULL, NULL, '2026-04-11 20:08:22', NULL, NULL, '2026-03-12 18:09:02', '2026-04-11 20:08:22'),
+(2, 'b.jean', 'b.jean@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'enseignant', 'active', 'Jean', 'Benoit', '0666778899', '10 rue de la Paix, Paris', '2026-04-06 12:52:35', NULL, NULL, '2026-03-12 18:09:02', '2026-04-06 12:52:35'),
 (3, 'p.marchand', 'p.marchand@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'enseignant', 'active', 'Marchand', 'Philippe', '0677889900', '6 allée des Roses, Lyon', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
 (4, 'n.girard', 'n.girard@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'enseignant', 'active', 'Girard', 'Nathalie', '0688990011', '18 rue Gambetta, Marseille', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
 (5, 's.bonnet', 's.bonnet@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'enseignant', 'active', 'Bonnet', 'Sébastien', '0699001122', '2 place du Marché, Toulouse', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
@@ -520,8 +565,8 @@ INSERT INTO `users` (`id`, `username`, `email`, `password`, `role`, `status`, `n
 (9, 'baptiste.martin', 'baptiste.martin@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Martin', 'Baptiste', '0623456789', '5 allée des Roses, Toulouse', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
 (10, 'clara.bernard', 'clara.bernard@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Bernard', 'Clara', '0634567890', '8 avenue Victor Hugo, Toulouse', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
 (11, 'david.leroy', 'david.leroy@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Leroy', 'David', '0645678901', '3 impasse des Pins, Toulouse', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
-(12, 'emma.moreau', 'emma.moreau@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Moreau', 'Emma', '0656789012', '27 rue Nationale, Toulouse', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
-(13, 'lucas', 'lucas@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Lucas', 'Lucas', '0623520254', 'Toulon', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
+(12, 'emma.moreau', 'emma.moreau@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Moreau', 'Emma', '0656789012', '27 rue Nationale, Toulouse', '2026-04-11 09:23:59', NULL, NULL, '2026-03-12 18:09:02', '2026-04-11 09:23:59'),
+(13, 'lucas', 'lucas@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Lucas', 'Lucas', '0623520254', 'Toulon', '2026-04-03 14:11:57', NULL, NULL, '2026-03-12 18:09:02', '2026-04-03 14:11:57'),
 (14, 'sophie.durand', 'sophie.durand@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Durand', 'Sophie', '0611223344', '14 rue Pasteur, Paris', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
 (15, 'thomas.lambert', 'thomas.lambert@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Lambert', 'Thomas', '0622334455', '8 avenue Foch, Lyon', '2026-03-12 17:57:02', NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 17:57:02'),
 (16, 'camille.petit', 'camille.petit@isig.fr', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'etudiant', 'active', 'Petit', 'Camille', '0633445566', '3 rue Voltaire, Bordeaux', NULL, NULL, NULL, '2026-03-12 18:09:02', '2026-03-12 18:09:02'),
@@ -532,6 +577,14 @@ INSERT INTO `users` (`id`, `username`, `email`, `password`, `role`, `status`, `n
 --
 -- Index pour les tables déchargées
 --
+
+--
+-- Index pour la table `avis_formation`
+--
+ALTER TABLE `avis_formation`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_avis` (`id_etudiant`,`id_formation`),
+  ADD KEY `id_formation` (`id_formation`);
 
 --
 -- Index pour la table `classe`
@@ -604,13 +657,6 @@ ALTER TABLE `session`
   ADD KEY `id_enseignant` (`id_enseignant`);
 
 --
--- Index pour la table `session_classe`
---
-ALTER TABLE `session_classe`
-  ADD PRIMARY KEY (`id_session`,`id_classe`),
-  ADD KEY `id_classe` (`id_classe`);
-
---
 -- Index pour la table `session_etudiant`
 --
 ALTER TABLE `session_etudiant`
@@ -630,6 +676,12 @@ ALTER TABLE `users`
 --
 
 --
+-- AUTO_INCREMENT pour la table `avis_formation`
+--
+ALTER TABLE `avis_formation`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
+--
 -- AUTO_INCREMENT pour la table `classe`
 --
 ALTER TABLE `classe`
@@ -645,19 +697,19 @@ ALTER TABLE `contact`
 -- AUTO_INCREMENT pour la table `cours`
 --
 ALTER TABLE `cours`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT pour la table `enseignant`
 --
 ALTER TABLE `enseignant`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT pour la table `etudiant`
 --
 ALTER TABLE `etudiant`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT pour la table `formation`
@@ -669,19 +721,19 @@ ALTER TABLE `formation`
 -- AUTO_INCREMENT pour la table `note`
 --
 ALTER TABLE `note`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
 
 --
 -- AUTO_INCREMENT pour la table `salle`
 --
 ALTER TABLE `salle`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT pour la table `session`
 --
 ALTER TABLE `session`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT pour la table `users`
@@ -692,6 +744,13 @@ ALTER TABLE `users`
 --
 -- Contraintes pour les tables déchargées
 --
+
+--
+-- Contraintes pour la table `avis_formation`
+--
+ALTER TABLE `avis_formation`
+  ADD CONSTRAINT `avis_formation_ibfk_1` FOREIGN KEY (`id_etudiant`) REFERENCES `etudiant` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `avis_formation_ibfk_2` FOREIGN KEY (`id_formation`) REFERENCES `formation` (`id`) ON DELETE CASCADE;
 
 --
 -- Contraintes pour la table `classe`
@@ -732,13 +791,6 @@ ALTER TABLE `session`
   ADD CONSTRAINT `session_ibfk_1` FOREIGN KEY (`id_cours`) REFERENCES `cours` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `session_ibfk_2` FOREIGN KEY (`id_salle`) REFERENCES `salle` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `session_ibfk_3` FOREIGN KEY (`id_enseignant`) REFERENCES `enseignant` (`id`) ON DELETE CASCADE;
-
---
--- Contraintes pour la table `session_classe`
---
-ALTER TABLE `session_classe`
-  ADD CONSTRAINT `session_classe_ibfk_1` FOREIGN KEY (`id_session`) REFERENCES `session` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `session_classe_ibfk_2` FOREIGN KEY (`id_classe`) REFERENCES `classe` (`id`) ON DELETE CASCADE;
 
 --
 -- Contraintes pour la table `session_etudiant`
